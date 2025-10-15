@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四班二輪假別分類詳情與計算</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 定義摩卡慕絲與淡橘色配色 */
+        :root {
+            --color-mocha: #5D4037; /* 深摩卡 (Primary Text) */
+            --color-light-bg: #FAF0E6; /* 淺米白/亞麻 (Background) */
+            --color-apricot: #FFCC80; /* 淡橘色 (Accent) */
+            --color-apricot-dark: #FFA726; /* 較深的淡橘色 (Button Hover) */
+            --color-table-header: #E7D6C6; /* 淺摩卡 (Table Header) */
+            --color-tab-inactive: #F5E9DD; /* Tab 背景色 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-light-bg);
+            color: var(--color-mocha);
+        }
+        .card {
+            background-color: white;
+            border: 1px solid var(--color-table-header);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        }
+        .header-bg {
+            background-color: var(--color-table-header);
+        }
+        .accent-color {
+            color: var(--color-apricot-dark);
+        }
+        .input-style {
+            border: 2px solid var(--color-apricot);
+            background-color: #FFF8E1; /* 較淺的橘色背景 */
+            color: var(--color-mocha);
+        }
+        .btn-accent {
+            background-color: var(--color-apricot-dark);
+            color: var(--color-mocha);
+            font-weight: 600;
+        }
+        .btn-accent:hover {
+            background-color: var(--color-apricot);
+        }
+        .detail-box {
+            border-left: 4px solid var(--color-apricot-dark);
+        }
+        /* 清除列表樣式，使用簡單的點標記 */
+        .detail-list {
+            list-style: none;
+            padding-left: 1rem;
+        }
+        .detail-list li:before {
+            content: "•";
+            color: var(--color-apricot-dark);
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+        
+        /* Tab 樣式 */
+        .tab-button {
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem 0.5rem 0 0;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-weight: 600;
+            background-color: var(--color-tab-inactive);
+            color: var(--color-mocha);
+            border: 1px solid var(--color-table-header);
+            border-bottom: none;
+        }
+        .tab-button.active {
+            background-color: white;
+            color: var(--color-mocha);
+            border-top: 3px solid var(--color-apricot-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+        }
+        .tab-content {
+            border-top: 1px solid var(--color-table-header);
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0 0.5rem 0.5rem 0.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-4xl mx-auto space-y-8">
+        <h1 class="text-3xl font-extrabold text-center" style="color: var(--color-mocha);">
+            四班二輪 (10H 工時) 休假天數參考與細節
+        </h1>
+        <p class="text-center text-sm opacity-80" style="color: var(--color-mocha);">
+            本表專為每日工作 10 小時的排班制設計。法定日數皆為您應有的權益。
+        </p>
+
+        <!-- 特休快速換算區塊 (位於總覽) -->
+        <div id="overview-section" class="card p-6 rounded-xl shadow-lg">
+            <h2 class="text-xl font-bold mb-4" style="color: var(--color-mocha);">
+                特別休假 (特休) 快速換算
+            </h2>
+            <div class="flex flex-col md:flex-row items-start md:items-end space-y-4 md:space-y-0 md:space-x-4">
+                <div class="w-full md:w-auto flex-grow">
+                    <label for="annualLeaveDays" class="block text-sm font-medium opacity-80">
+                        輸入您的法定特休天數 (例如：7)
+                    </label>
+                    <input type="number" id="annualLeaveDays" value="7" min="0" class="input-style mt-1 block w-full rounded-lg p-2.5 transition duration-150 focus:ring-1 focus:ring-offset-2" oninput="calculateAnnualLeave()">
+                </div>
+                <button onclick="calculateAnnualLeave()" class="btn-accent w-full md:w-auto px-6 py-2 rounded-lg transition duration-150 hover:shadow-md">
+                    立即換算
+                </button>
+            </div>
+            
+            <div class="mt-6 p-4 rounded-lg header-bg">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium">總特休時數額度 (8H 基準)</span>
+                    <span id="totalHours" class="text-xl font-bold accent-color">56.0 小時</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="font-medium">在 10H 工時下實際可請天數</span>
+                    <span id="actualDays" class="text-xl font-bold accent-color">5.6 天</span>
+                </div>
+                <p class="text-xs mt-2 opacity-70">
+                    計算公式：(法定天數 x 8 小時) / 10 小時
+                </p>
+            </div>
+        </div>
+
+        <!-- 假別對照總表 (位於總覽) -->
+        <div id="summary-table-section" class="card p-6 rounded-xl shadow-lg overflow-x-auto">
+            <h2 class="text-xl font-bold mb-4" style="color: var(--color-mocha);">
+                各假別法定應給與實際折算對照表
+            </h2>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="header-bg">
+                        <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tl-lg">假別</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">法定應給日數</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">折算總時數 (8H 基準)</th>
+                        <th class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tr-lg">10H 工時下實際可請天數</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <!-- 一般假別 (適用 0.8 折算率) -->
+                    <tr class="hover:bg-gray-50"><td class="px-3 py-3 whitespace-nowrap font-medium">特別休假 (特休)</td><td class="px-3 py-3 whitespace-nowrap text-green-600">依年資</td><td class="px-3 py-3 whitespace-nowrap">依年資 x 8H</td><td class="px-3 py-3 whitespace-nowrap text-green-600">依年資 x 0.8 天</td></tr>
+                    <tr class="hover:bg-gray-50"><td class="px-3 py-3 whitespace-nowrap font-medium">普通傷病假 (病假)</td><td class="px-3 py-3 whitespace-nowrap font-bold text-red-600">30 日</td><td class="px-3 py-3 whitespace-nowrap">240 小時</td><td class="px-3 py-3 whitespace-nowrap font-bold">24.0 日</td></tr>
+                    <tr class="hover:bg-gray-50"><td class="px-3 py-3 whitespace-nowrap font-medium">事假</td><td class="px-3 py-3 whitespace-nowrap">14 日</td><td class="px-3 py-3 whitespace-nowrap">112 小時</td><td class="px-3 py-3 whitespace-nowrap">11.2 日</td></tr>
+                    <tr class="hover:bg-gray-50"><td class="px-3 py-3 whitespace-nowrap font-medium">婚假</td><td class="px-3 py-3 whitespace-nowrap">8 日</td><td class="px-3 py-3 whitespace-nowrap">64 小時</td><td class="px-3 py-3 whitespace-nowrap">6.4 日</td></tr>
+                    <tr class="hover:bg-gray-50"><td class="px-3 py-3 whitespace-nowrap font-medium">喪假 (最高)</td><td class="px-3 py-3 whitespace-nowrap">8 日</td><td class="px-3 py-3 whitespace-nowrap">64 小時</td><td class="px-3 py-3 whitespace-nowrap">6.4 日</td></tr>
+                    <tr class="hover:bg-gray-50"><td class="px-3 py-3 whitespace-nowrap font-medium">家庭照顧假</td><td class="px-3 py-3 whitespace-nowrap">7 日</td><td class="px-3 py-3 whitespace-nowrap">56 小時</td><td class="px-3 py-3 whitespace-nowrap">5.6 日</td></tr>
+
+                    <!-- 特殊假別 (不折算/曆日計算) - New Grouping -->
+                    <tr class="bg-indigo-50/50 hover:bg-indigo-50"><td class="px-3 py-3 whitespace-nowrap font-medium text-indigo-700">產假</td><td class="px-3 py-3 whitespace-nowrap font-bold text-indigo-700">依曆日 (8/4/1 週)</td><td class="px-3 py-3 whitespace-nowrap">—</td><td class="px-3 py-3 whitespace-nowrap font-bold text-indigo-700">— (依曆日)</td></tr>
+                    <tr class="bg-indigo-50/50 hover:bg-indigo-50"><td class="px-3 py-3 whitespace-nowrap font-medium text-indigo-700">流產假</td><td class="px-3 py-3 whitespace-nowrap font-bold text-indigo-700">依曆日 (4/2/1 週)</td><td class="px-3 py-3 whitespace-nowrap">—</td><td class="px-3 py-3 whitespace-nowrap font-bold text-indigo-700">— (依曆日)</td></tr>
+                    <tr class="bg-indigo-50/50 hover:bg-indigo-50"><td class="px-3 py-3 whitespace-nowrap font-medium text-indigo-700">陪產檢及陪產假</td><td class="px-3 py-3 whitespace-nowrap font-bold text-indigo-700">7 日</td><td class="px-3 py-3 whitespace-nowrap text-indigo-700">56 小時</td><td class="px-3 py-3 whitespace-nowrap font-bold text-indigo-700">7 日 (不折算)</td></tr>
+                    <tr class="bg-indigo-50/50 hover:bg-indigo-50"><td class="px-3 py-3 whitespace-nowrap font-medium text-indigo-700">生理假</td><td class="px-3 py-3 whitespace-nowrap font-bold text-indigo-700">每月 1 日</td><td class="px-3 py-3 whitespace-nowrap">—</td><td class="px-3 py-3 whitespace-nowrap font-bold text-indigo-700">1 日 (不折算)</td></tr>
+                    
+                    <!-- 其他假別 -->
+                    <tr class="hover:bg-gray-50"><td class="px-3 py-3 whitespace-nowrap font-medium">公假/公傷假</td><td class="px-3 py-3 whitespace-nowrap">依規定</td><td class="px-3 py-3 whitespace-nowrap">依規定</td><td class="px-3 py-3 whitespace-nowrap">依規定</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 假別詳細內容 - 分頁區塊 -->
+        <div class="pt-4">
+            <!-- Tab 按鈕區塊 -->
+            <div class="flex flex-wrap -mb-px relative z-10">
+                <button class="tab-button active" data-tab="general">一般假別</button>
+                <button class="tab-button" data-tab="family">家庭與婚喪</button>
+                <button class="tab-button" data-tab="special">特殊與法定假別</button>
+                <button class="tab-button" data-tab="other">其他假別</button>
+            </div>
+
+            <!-- Tab 內容區塊 -->
+            <div id="tab-content-container" class="tab-content">
+                
+                <!-- 預設顯示：一般假別 -->
+                <div id="general" class="tab-pane space-y-6">
+                    <h3 class="text-xl font-bold border-b pb-2" style="border-color: var(--color-apricot-dark);">
+                        一般假別 (特休、病假、事假) - **需依工時折算 (0.8 倍)**
+                    </h3>
+                    
+                    <!-- 特別休假 (特休) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">特別休假 (年假)</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 依年資計算 (法定 3 至 30 天)。</li>
+                            <li>**給薪狀態：** **全薪**。不影響全勤。</li>
+                            <li>**請假細節：** 依 8H/天換算，換成 10H 班制時，實際可休天數為法定天數的 **0.8 倍**。可以小時或分鐘為請假單位。</li>
+                            <li>**備註：** 特休應由勞工排定，年度內未休完須結算換發現金。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 普通傷病假 (病假) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">普通傷病假 (病假)</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 住院與非住院者，一年內合計不得超過 **30 天**。折算後約可請 **24.0 日** (10H 班制)。</li>
+                            <li>**給薪狀態：** **半薪** (以 30 天為限)。超過 30 天後為無薪。</li>
+                            <li>**請假細節：** 視為**缺勤**影響全勤獎金。以小時或分鐘為請假單位。</li>
+                            <li>**證明文件：** 醫院所開具之診斷證明。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 事假 -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">事假</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 一年內合計不得超過 **14 天**。折算後約可請 **11.2 日** (10H 班制)。</li>
+                            <li>**給薪狀態：** **無薪**。</li>
+                            <li>**請假細節：** 屬於無薪假，視為**缺勤**，可能影響全勤獎金和考績。以小時或分鐘為請假單位。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 家庭與婚喪 (需要折算) -->
+                <div id="family" class="tab-pane hidden space-y-6">
+                    <h3 class="text-xl font-bold border-b pb-2" style="border-color: var(--color-apricot-dark);">
+                        家庭與婚喪 (婚假、喪假、家庭照顧假) - **需依工時折算 (0.8 倍)**
+                    </h3>
+                    
+                    <!-- 婚假 -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">婚假</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 法定 **8 天** (64 小時)。折算 10H 班制約 **6.4 天**。</li>
+                            <li>**給薪狀態：** **全薪**。不影響全勤。</li>
+                            <li>**請假細節：** 須於登記日前 10 日起 3 個月內請畢。經雇主同意可延長至 1 年。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 喪假 (細項補充) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">喪假 (依親屬關係分天數)</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：**
+                                <ul class="list-disc ml-5 mt-1 space-y-1">
+                                    <li>**8 日：** 父母、養父母、繼父母、配偶。 (折算 10H 約 **6.4 天**)</li>
+                                    <li>**6 日：** 祖父母、子女、配偶之父母/養父母/繼父母。 (折算 10H 約 **4.8 天**)</li>
+                                    <li>**3 日：** 曾祖父母、兄弟姊妹、配偶之祖父母。 (折算 10H 約 **2.4 天**)</li>
+                                </ul>
+                            </li>
+                            <li>**給薪狀態：** **全薪**。不影響全勤。</li>
+                            <li>**請假細節：** 喪假可與雇主協商以**小時或分鐘**為請假單位。</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- 家庭照顧假 (新增) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">家庭照顧假 (納入事假額度)</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 一年內合計不得超過 **7 天**。折算 10H 班制約 **5.6 天**。</li>
+                            <li>**給薪狀態：** **無薪**。</li>
+                            <li>**請假細節：** 其請假日數會併入**事假**計算。目的在於處理家庭成員嚴重疾病或 3 歲以下子女照顧等事宜。</li>
+                            <li>**備註：** 雇主不得因勞工請此假而拒絕或視為缺勤影響考績。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 特殊假別 (曆日計算) -->
+                <div id="special" class="tab-pane hidden space-y-6">
+                    <h3 class="text-xl font-bold border-b pb-2" style="border-color: var(--color-apricot-dark);">
+                        特殊與法定假別 (產假、陪產假、生理假 - **依曆日/固定天數計算，不折算**)
+                    </h3>
+                    
+                    <!-- 產假 (不折算) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">產假</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 依分娩情況，依**曆日**計算：**8 星期** (分娩) 或 **4 星期** (懷孕 3 個月以上流產)。</li>
+                            <li>**給薪狀態：** 工作滿 6 個月以上 **全薪**；未滿 6 個月 **半薪**。不影響全勤。</li>
+                            <li>**請假細節：** 依**曆日**計算，**不受 10H 班制影響而折算**。</li>
+                            <li>**證明文件：** 醫院所開具之出生證明或產檢證明。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 陪產檢及陪產假 (不折算) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">陪產檢及陪產假 (合併)</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 法定 **7 天**，總額度為 **56 小時**。</li>
+                            <li>**給薪狀態：** **全薪**。不影響全勤。</li>
+                            <li>**請假細節：** 依**固定法定天數 (7日)** 給予，**不受 10H 班制影響而折算**。請假單位可以小時計算，但總額度為 56 小時。</li>
+                            <li>**請假期間：** 陪產檢假須於配偶懷孕期間請畢；陪產假須於配偶分娩之日及其前後 15 日內請畢。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 流產假 (不折算) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">流產假</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 依懷孕週數 (法定日數)，依**曆日**計算：
+                                <ul class="list-disc ml-5 mt-1 space-y-1">
+                                    <li>懷孕 20 週以上：法定 **4 星期** (28 天)。</li>
+                                    <li>懷孕 12 週至未滿 20 週：法定 **2 星期** (14 天)。</li>
+                                    <li>懷孕未滿 12 週：法定 **1 星期** (7 天)。</li>
+                                </ul>
+                            </li>
+                            <li>**給薪狀態：** 工作滿 6 個月以上 **全薪**；未滿 6 個月 **半薪**。</li>
+                            <li>**請假細節：** 依**曆日**計算，**不受 10H 班制影響而折算**。</li>
+                            <li>**證明文件：** 醫院所開具之流產證明 (需註明懷孕週數)。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 生理假 (不折算) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">生理假</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 每月 **1 日**。全年未逾 3 日不併入病假計算。</li>
+                            <li>**給薪狀態：** 薪資均**減半發給**。</li>
+                            <li>**請假細節：** 依**曆日**為計算單位，每次請假以 1 曆日為原則，**不受 10H 班制影響而折算**。</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 其他假別 -->
+                <div id="other" class="tab-pane hidden space-y-6">
+                    <h3 class="text-xl font-bold border-b pb-2" style="border-color: var(--color-apricot-dark);">
+                        其他假別 (公假、公傷病假、天然災害假)
+                    </h3>
+                    
+                    <!-- 公假 (新增) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">公假</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 依需求實報實銷。</li>
+                            <li>**給薪狀態：** **全薪**。不影響全勤。</li>
+                            <li>**請假細節：** 因執行職務、法令規定或兵役點召等原因必須停止工作時給予。</li>
+                            <li>**備註：** 依實際執行公務所需時數核給。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 公傷病假 (新增) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">公傷病假</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 依醫療所需，無限制。</li>
+                            <li>**給薪狀態：** **原領工資**照給。</li>
+                            <li>**請假細節：** 因職業災害而受傷或生病，在醫療期間給予。</li>
+                            <li>**備註：** 若治療期間超過兩年，經公立醫院證明療養無效，且符合勞動基準法規定，可由雇主給予一次性傷病補償金。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 天然災害假 (新增) -->
+                    <div class="card p-5 rounded-xl shadow detail-box">
+                        <h4 class="text-lg font-semibold mb-2 accent-color">天然災害假 (非屬法定假別)</h4>
+                        <ul class="detail-list text-sm space-y-1">
+                            <li>**天數額度：** 依政府公告停止上班日數。</li>
+                            <li>**給薪狀態：** 法令**未規定**給薪，多數企業會給薪。</li>
+                            <li>**請假細節：** 依據《天然災害發生事業單位勞工出勤管理及工資給付要點》處理。</li>
+                            <li>**備註：** 員工未出勤，雇主**不得**扣發全勤獎金、強迫補休或要求用其他假別處理。</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 假別計算功能
+        document.addEventListener('DOMContentLoaded', () => {
+            calculateAnnualLeave();
+            setupTabs();
+        });
+
+        function calculateAnnualLeave() {
+            const inputElement = document.getElementById('annualLeaveDays');
+            const totalHoursElement = document.getElementById('totalHours');
+            const actualDaysElement = document.getElementById('actualDays');
+            
+            const statutoryDays = parseFloat(inputElement.value);
+
+            if (isNaN(statutoryDays) || statutoryDays < 0) {
+                totalHoursElement.textContent = '0.0 小時';
+                actualDaysElement.textContent = '0.0 天';
+                return;
+            }
+
+            // 1. 換算總時數 (法定基準 8 小時)
+            const totalHoursCalculated = statutoryDays * 8;
+            
+            // 2. 換算 10H 工時下的實際可請天數
+            const actualDaysCalculated = totalHoursCalculated / 10;
+            
+            totalHoursElement.textContent = `${totalHoursCalculated.toFixed(1)} 小時`;
+            actualDaysElement.textContent = `${actualDaysCalculated.toFixed(1)} 天`;
+        }
+        
+        // 分頁 (Tab) 功能
+        function setupTabs() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            
+            // 設定點擊事件
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.getAttribute('data-tab');
+
+                    // 隱藏所有內容
+                    tabPanes.forEach(pane => {
+                        pane.classList.add('hidden');
+                    });
+                    
+                    // 移除所有按鈕的 active 樣式
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+
+                    // 顯示目標內容
+                    document.getElementById(targetId).classList.remove('hidden');
+
+                    // 啟用點擊的按鈕
+                    button.classList.add('active');
+                });
+            });
+
+            // 初始化：預設顯示第一個 Tab (general)
+            document.querySelector('.tab-button').click();
+        }
+    </script>
+</body>
+</html>
